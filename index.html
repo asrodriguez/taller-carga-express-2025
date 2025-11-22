@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Taller Carga Cognitiva Express 2025</title>
+<style>
+  :root { font-family: system-ui, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { height:100%; margin:0; background:#fafafa; color:#222; }
+  .wrap { height:100%; max-width:900px; margin:0 auto; display:flex; flex-direction:column; }
+  .card { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:14px; margin:10px 14px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  h1,h2,h3 { margin: 6px 0; }
+  .muted { color:hsl(0, 0%, 0%); font-size:16px; }
+  button { font-size:16px; padding:10px 14px; border:0; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.12); background:#0ea5e9; color:#fff; cursor:pointer; }
+  button.secondary { background:#f1f5f9; color:#222; }
+  button.warn { background:#f59e0b; color:#111; }
+  button.ghost { background:#e5e7eb; color:#111; }
+  button:disabled { opacity:.45; cursor:default; }
+  input, select { font-size:16px; padding:8px 10px; border-radius:10px; border:1px solid #e5e7eb; }
+  .view { display:none; }
+  .view.active { display:block; }
+
+  /* Flash bar full width */
+  .flashBar { position:fixed; left:0; top:0; width:100vw; height:12px; background:#e5e7eb; transition: background .12s; z-index:10; }
+
+  .pill { display:inline-block; padding:4px 8px; border-radius:999px; font-size:16px; background:#e2e8f0; }
+  .ok { color:#059669; } .bad { color:#b91c1c; } .warnTxt { color:#b45309; }
+
+  /* Task area + bottom bar */
+  .board { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .arena { flex:1; display:flex; align-items:center; justify-content:center; padding:12px; }
+  .bottomBar { position: sticky; bottom: 0; background: #ffffffcc; backdrop-filter: blur(6px);
+      padding: 8px 14px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:space-between; align-items:center; }
+
+  /* Bigger typography on task screen */
+  .taskView header.card { font-size:18px; }
+  .taskView .muted { font-size:18px; }
+  .taskView .pill { font-size:16px; }
+  .taskView button { font-size:18px; padding:12px 16px; }
+  .taskView .cell { font-size:30px; }
+
+  /* shared grid/cell */
+  .grid4 { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; width:min(480px,92%); margin:0 auto; }
+  .cell { background:#f1f5f9; border-radius:10px; display:flex; align-items:center; justify-content:center; aspect-ratio:1; user-select:none; cursor:pointer; }
+
+  /* TLX */
+  .sliderRow { display:grid; grid-template-columns: 170px 1fr 60px; gap:10px; align-items:center; margin:8px 0; }
+  .sliderRow input[type=range]{ width:100%; }
+  .timerBig { font-size:54px; font-weight:800; letter-spacing:1px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Flash bar visible only in DUAL -->
+  <div id="flashBar" class="flashBar" style="display:none;"></div>
+
+  <!-- ============ Pantalla 0 (welcome) ============ -->
+  <div id="viewWelcome" class="view active">
+    <div class="card" style="text-align:center;">
+      <h1>Taller Carga Cognitiva Express</h1>
+      <h2>Noviembre 2025</h2>
+      <div class="row" style="justify-content:center; margin-top:8px;">
+        <h3>Consentimiento para participar</h3>
+        Al iniciar este ejercicio aceptás que la aplicación registre tus interacciones (tiempos de respuesta, aciertos y respuestas a NASA-TLX).
+        <br>
+        Los datos serán anonimizados, usados únicamente con fines de investigación y docencia, y podrán incluirse en publicaciones académicas de manera colectiva y confidencial.
+        <br>
+        No se recopila ninguna información personal que permita identificarte.
+        <br>
+        Si continuás, estás dando tu consentimiento para participar.
+        <hr width="50%" color="blue" size="1px"  />
+        Vas a hacer 5 tareas. Cada una se repite en 2 condiciones (BASE/DUAL).<br>
+        Al final se descarga un único archivo con datos.
+      </div>
+      <div class="row" style="justify-content:center; margin-top:8px;">
+        <label>Ingresar ID:</label>
+        <input id="pid" maxlength="4" placeholder="--1234--" style="width:140px; text-transform:uppercase;">
+        <label>Seleccionar Grupo:</label>
+        <select id="groupSel">
+          <option value="A">Grupo A</option>
+          <option value="B">Grupo B</option>
+          <option value="C">Grupo C</option>
+          <option value="D">Grupo D</option>
+          <option value="E">Grupo E</option>
+        </select>
+      </div>
+      <div style="margin-top:12px;">
+        <button id="beginBtn">Empezar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Pantalla 1/4 (task runner) ============ -->
+  <div id="viewTask" class="view taskView">
+    <header class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div class="pill" id="labelTask">Tarea</div>
+          <div class="pill" id="labelCond">COND</div>
+        </div>
+        <div class="pill">Tiempo pendiente: <b id="timeLeft">120</b>s</div>
+      </div>
+
+      <div class="row" style="margin-top:8px; align-items:center;">
+        <div id="baseIndicators" class="muted" style="display:none;">
+          Sin vibración o flash
+        </div>
+      </div>
+
+      <div class="muted" id="iosWarn" style="display:none;margin-top:6px;">
+        <b class="warnTxt">Aviso:</b> Este navegador no soporta vibración programática. Usará solo el <b>flash</b> visual.
+      </div>
+    </header>
+
+    <main class="board">
+      <section class="arena">
+        <!-- acá inyectamos el UI de cada tarea -->
+        <div id="taskContainer" style="width:100%;"></div>
+      </section>
+
+      <!-- Bottom bar now includes DUAL indicators -->
+      <div class="bottomBar">
+        <div id="dualIndicators" class="row" style="display:none;">
+          <button id="buzzBtn" class="warn">💥 Vibró / Flasheó</button>
+          <span id="supportNote" class="muted"></span>
+        </div>
+        <div class="muted">Respondé lo más rápido y preciso posible.</div>
+        <button id="stopBtn" class="secondary">Stop</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ Pantalla 2/5 (NASA TLX) ============ -->
+  <div id="viewTLX" class="view">
+    <div class="card">
+      <h2>NASA - TLX</h2>
+      <div class="muted">Índice de carga de tarea</div>
+      <p class="muted small">Indicá en cada slider un valor de 0 (bajo) a 100 (alto).</p>
+
+      <div class="sliderRow"><div>Demanda Mental</div><input type="range" id="tlx_mental" min="0" max="100" value="50"><div><b id="tlx_mental_out">50</b></div></div>
+      <div class="sliderRow"><div>Demanda Física</div><input type="range" id="tlx_fisica" min="0" max="100" value="50"><div><b id="tlx_fisica_out">50</b></div></div>
+      <div class="sliderRow"><div>Demanda Temporal</div><input type="range" id="tlx_temporal" min="0" max="100" value="50"><div><b id="tlx_temporal_out">50</b></div></div>
+      <div class="sliderRow"><div>Esfuerzo</div><input type="range" id="tlx_esfuerzo" min="0" max="100" value="50"><div><b id="tlx_esfuerzo_out">50</b></div></div>
+      <div class="sliderRow"><div>Rendimiento</div><input type="range" id="tlx_rendimiento" min="0" max="100" value="50"><div><b id="tlx_rendimiento_out">50</b></div></div>
+      <div class="sliderRow"><div>Frustración</div><input type="range" id="tlx_frustracion" min="0" max="100" value="50"><div><b id="tlx_frustracion_out">50</b></div></div>
+      <div class="row" style="margin-top:10px; justify-content:flex-end;">
+        <button id="tlxDoneBtn" disabled title="Ajustá los según lo que experimentaste">Completado</button>
+      </div>
+      
+      <div class="muted" id="tlxHint" style="margin-top:6px;">Ajustá los según lo que experimentaste.</div>
+    </div>
+  </div>
+
+  <!-- ============ Pantalla 3 (intermedio) ============ -->
+  <div id="viewBreak" class="view">
+    <div class="card" style="text-align:center;">
+      <h2>Descanso breve</h2>
+      <div class="muted">En 30 segundos continúa la siguiente condición/tarea.</div>
+      <div id="breakTimer" class="timerBig">30</div>
+    </div>
+  </div>
+
+  <!-- ============ Pantalla final (export) ============ -->
+  <div id="viewEnd" class="view">
+    <div class="card" style="text-align:center;">
+      <h2>¡Listo!</h2>
+      <p class="muted">Descargá un único CSV con todos tus datos y compartilo por WhatsApp.</p>
+      <button id="exportBtn">Exportar CSV</button>
+      <div id="exportMsg" class="muted" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   Utils + shared
+========================================================= */
+const $ = sel => document.querySelector(sel);
+const now = () => performance.now();
+
+function toCSV(rows){
+  return rows.map(r => r.map(v => {
+    if (v==null) return "";
+    const s = String(v);
+    return (s.includes(",")||s.includes("\n")) ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(",")).join("\n");
+}
+
+function timestamp(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+async function shareOrDownloadCSV(textContent, filename){
+  const blob = new Blob([textContent], {type:"text/csv;charset=utf-8"});
+  const file = new File([blob], filename, {type: blob.type, lastModified: Date.now()});
+  try{
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file], title: filename, text: "CSV del taller" });
+      return true;
+    }
+  }catch(e){}
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 500);
+  return false;
+}
+
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('#'+id).classList.add('active');
+}
+
+/* =========================================================
+   Global experiment state
+========================================================= */
+const BLOCK_SECONDS = 10;
+const BREAK_SECONDS = 3;
+
+const latinSquare = {
+  A: ["par_impar","oneback","gonogo","grilla","secuencia"],
+  B: ["oneback","gonogo","grilla","secuencia","par_impar"],
+  C: ["gonogo","grilla","secuencia","par_impar","oneback"],
+  D: ["grilla","secuencia","par_impar","oneback","gonogo"],
+  E: ["secuencia","par_impar","oneback","gonogo","grilla"]
+};
+
+const taskTitles = {
+  par_impar: "Par / Impar",
+  oneback: "1-back",
+  gonogo: "Go / No-Go",
+  grilla: "Grilla",
+  secuencia: "Secuencia 1→10"
+};
+
+let participantId = "";
+let groupId = "A";
+let taskOrder = [];
+let taskIndex = 0;
+
+let conditionOrder = [];  // e.g., ["BASE", "DUAL"]
+let condIndex = 0;
+
+let running = false;
+let blockTimer = null;
+let secondsLeft = BLOCK_SECONDS;
+
+// secondary ping logs (solo en DUAL)
+const canVibrate = 'vibrate' in navigator;
+let vibCount=0, hits=0, falseAlarms=0;
+let openWindow=false, acked=false, currentPing=null;
+const vibRTs=[];
+const vibLog=[];
+const FA_WINDOW=1500;
+let pingTimer=null;
+const flashBar = $('#flashBar');
+function flash(){
+  flashBar.style.background = '#86efac';
+  setTimeout(()=>flashBar.style.background='#e5e7eb', 180);
+}
+function scheduleNextPing(){
+  const delay = 2000 + Math.random()*2000;
+  pingTimer = setTimeout(()=>{
+    vibCount++;
+    flash();
+    if (canVibrate) navigator.vibrate([200]);
+
+    openWindow=true; acked=false;
+    const t0 = now();
+    currentPing = { idx:vibCount, t:t0 };
+
+    setTimeout(()=>{
+      if (!acked){
+        vibLog.push({idx:currentPing.idx, t_ms:Math.round(currentPing.t), hit:0, rt_ms:"", false_alarm:0});
+      }
+      openWindow=false;
+    }, FA_WINDOW);
+
+    if (running) scheduleNextPing();
+  }, delay);
+}
+function buzzPressed(){
+  if (!running || currentCondition()!=="DUAL") return;
+  if (openWindow && !acked){
+    acked=true; hits++;
+    const rt = now() - currentPing.t;
+    vibRTs.push(rt);
+    vibLog.push({idx:currentPing.idx, t_ms:Math.round(currentPing.t), hit:1, rt_ms:Math.round(rt), false_alarm:0});
+  } else {
+    falseAlarms++;
+    vibLog.push({idx:vibCount+1, t_ms:Math.round(now()), hit:0, rt_ms:"", false_alarm:1});
+  }
+}
+
+/* trial & tlx consolidated logs */
+const trialRows = [];  // one row per trial
+const tlxRows = [];    // one row per block
+
+let blockStartISO=null, blockEndISO=null;
+
+/* TLX current values */
+let TLX = { mental:50, fisica:50, temporal:50, esfuerzo:50, rendimiento:50, frustracion:50 };
+let tlxTouched = new Set(); // track adjusted sliders
+
+/* =========================================================
+   Tasks as modules
+========================================================= */
+const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const alpha = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+const TASKS = {
+
+  par_impar: {
+    mount(container){
+      container.innerHTML = `
+        <div class="card" style="width:min(520px,92%); text-align:center; margin:0 auto;">
+          <div class="muted">Número actual</div>
+          <div id="pi_number" style="font-size:82px;font-weight:700;">—</div>
+          <div id="pi_msg" class="muted" style="min-height:20px;margin-top:6px;"></div>
+        </div>
+        <div class="bottomBar" style="width:min(520px,92%); margin:10px auto 0;">
+          <div style="display:flex; gap:10px; width:100%;">
+            <button id="pi_evenBtn">PAR</button>
+            <button id="pi_oddBtn">IMPAR</button>
+          </div>
+        </div>`;
+      this.bind();
+    },
+    bind(){
+      $('#pi_evenBtn').onclick = ()=>this.choose('even');
+      $('#pi_oddBtn').onclick  = ()=>this.choose('odd');
+    },
+    currentNumber:null, trial:0, taskTimer:null, tShown:0,
+    newNumber(){
+      this.currentNumber = Math.floor(100 + Math.random()*900);
+      $('#pi_number').textContent=this.currentNumber;
+      this.tShown = now();
+    },
+    choose(kind){
+      if (!running || this.currentNumber==null) return;
+      const correct = (this.currentNumber % 2 === 0 && kind==='even') || (this.currentNumber % 2 === 1 && kind==='odd');
+      const rt = now()-this.tShown;
+      this.trial++;
+      trialRows.push({
+        id: participantId, grupo: groupId, tarea: "par_impar", condicion: currentCondition(),
+        trial: this.trial, number: this.currentNumber, choice: kind,
+        correct: correct?1:0, rt_ms: Math.round(rt)
+      });
+      $('#pi_msg').innerHTML = correct ? '<span class="ok">✓ Correcto</span>' : '<span class="bad">✗ Incorrecto</span>';
+      this.newNumber();
+    },
+    start(){
+      this.trial=0;
+      this.newNumber();
+      this.taskTimer = setInterval(()=>this.newNumber(), 3000);
+    },
+    stop(){ clearInterval(this.taskTimer); }
+  },
+
+  oneback: {
+    mount(container){
+      container.innerHTML = `
+        <div class="card" style="width:min(520px,92%); text-align:center; margin:0 auto;">
+          <div class="muted">Tocá <b>SÍ</b> si la letra coincide con la <b>anterior</b> (1-back).</div>
+          <div id="ob_letter" style="font-size:104px;font-weight:700;letter-spacing:2px;">—</div>
+          <div id="ob_msg" class="muted" style="min-height:20px;margin-top:6px;"></div>
+        </div>
+        <div class="bottomBar" style="width:min(520px,92%); margin:10px auto 0;">
+          <div style="display:flex; gap:10px; width:100%;">
+            <button id="ob_yesBtn">SÍ</button>
+            <button id="ob_noBtn"  class="secondary">NO</button>
+          </div>
+        </div>`;
+      this.bind();
+    },
+    bind(){
+      $('#ob_yesBtn').onclick=()=>this.respond(true);
+      $('#ob_noBtn').onclick =()=>this.respond(false);
+    },
+    prev:null, curr:null, trial:0, stimTimer:null, tShown:0,
+    nextLetter(){
+      this.prev = this.curr;
+      this.curr = alpha[Math.floor(Math.random()*alpha.length)];
+      if (Math.random()<0.25 && this.prev){ this.curr = this.prev; } // 25% match
+      $('#ob_letter').textContent = this.curr;
+      this.tShown = now();
+    },
+    respond(ans){
+      if (!running || this.curr==null) return;
+      const isMatch = this.prev && this.curr===this.prev;
+      const correct = (ans && isMatch) || (!ans && !isMatch) ? 1:0;
+      const rt = now()-this.tShown;
+      this.trial++;
+      trialRows.push({
+        id: participantId, grupo: groupId, tarea:"oneback", condicion: currentCondition(),
+        trial:this.trial, prev:this.prev||"", curr:this.curr, isMatch:isMatch?1:0,
+        answerYes:ans?1:0, correct, rt_ms:Math.round(rt)
+      });
+      $('#ob_msg').innerHTML = correct ? '<span class="ok">✓ Correcto</span>' : '<span class="bad">✗ Incorrecto</span>';
+      this.nextLetter();
+    },
+    tick(){ this.nextLetter(); this.stimTimer=setTimeout(()=>this.tick(), 2000); },
+    start(){ this.trial=0; this.prev=null; this.curr=null; this.tick(); },
+    stop(){ clearTimeout(this.stimTimer); }
+  },
+
+  gonogo: {
+    mount(container){
+      container.innerHTML = `
+        <div class="card" style="width:min(520px,92%); text-align:center; margin:0 auto;">
+          <div class="muted">Objetivo: <b>CÍRCULO</b>. Tocá <b>GO</b> solo cuando aparezca círculo.</div>
+          <div id="gng_stimArea" style="display:flex; align-items:center; justify-content:center; height:240px;"></div>
+          <div id="gng_msg" class="muted" style="min-height:20px;margin-top:6px;"></div>
+        </div>
+        <div class="bottomBar" style="width:min(520px,92%); margin:10px auto 0;">
+          <button id="gng_goBtn">GO</button>
+        </div>`;
+      this.bind();
+    },
+    bind(){ $('#gng_goBtn').onclick=()=>this.goPressed(); },
+    isTarget:false, trial:0, stimTimer:null, tShown:0,
+    drawStim(){
+      const area=$('#gng_stimArea'); area.innerHTML='';
+      this.isTarget = Math.random()<0.5;
+      let el;
+      if (this.isTarget){
+        el=document.createElement('div');
+        el.style.width='170px'; el.style.height='170px'; el.style.borderRadius='50%'; el.style.background='#c7f9cc';
+      } else {
+        if (Math.random()<0.5){
+          el=document.createElement('div');
+          el.style.width='170px'; el.style.height='170px'; el.style.borderRadius='14px'; el.style.background='#e2e8f0';
+        } else {
+          el=document.createElement('div');
+          el.style.width='0'; el.style.height='0';
+          el.style.borderLeft='85px solid transparent';
+          el.style.borderRight='85px solid transparent';
+          el.style.borderBottom='150px solid #cbd5e1';
+        }
+      }
+      area.appendChild(el);
+      this.tShown=now();
+    },
+    goPressed(){
+      if (!running) return;
+      const rt = now()-this.tShown;
+      const correct = this.isTarget?1:0;
+      const fa = this.isTarget?0:1;
+      this.trial++;
+      trialRows.push({
+        id:participantId, grupo:groupId, tarea:"gonogo", condicion:currentCondition(),
+        trial:this.trial, is_target:this.isTarget?1:0, response:"GO",
+        correct, rt_ms:Math.round(rt), false_alarm:fa
+      });
+      $('#gng_msg').innerHTML = correct ? '<span class="ok">✓ GO correcto</span>' : '<span class="bad">✗ Falsa alarma</span>';
+      this.drawStim();
+    },
+    tickStim(){ this.drawStim(); this.stimTimer=setTimeout(()=>this.tickStim(), 1500+Math.random()*1000); },
+    start(){ this.trial=0; this.tickStim(); },
+    stop(){ clearTimeout(this.stimTimer); }
+  },
+
+  grilla: {
+    mount(container){
+      container.innerHTML = `
+        <div class="card" style="width:min(560px,94%); text-align:center; margin:0 auto;">
+          <div class="muted">Tocá la letra objetivo <span id="gr_goal" style="font-weight:700;">X</span> en la grilla</div>
+          <div class="grid4" id="gr_grid"></div>
+          <div id="gr_msg" class="muted" style="min-height:20px;margin-top:6px;"></div>
+        </div>
+        <div class="bottomBar" style="width:min(560px,94%); margin:10px auto 0;">
+          <button id="gr_shuffleBtn" class="secondary">Nuevo objetivo</button>
+        </div>`;
+      this.bind();
+    },
+    bind(){ $('#gr_shuffleBtn').onclick=()=>this.newGoal(); },
+    goal:"X", trial:0, tShown:0,
+    randLetter(excl){ let c; do{ c=letters[Math.floor(Math.random()*letters.length)] }while(c===excl); return c; },
+    renderGrid(){
+      const grid=$('#gr_grid'); grid.innerHTML='';
+      const idxGoal=Math.floor(Math.random()*16);
+      for(let i=0;i<16;i++){
+        const div=document.createElement('div');
+        div.className='cell';
+        div.textContent=(i===idxGoal)?this.goal:this.randLetter(this.goal);
+        div.dataset.goal=(i===idxGoal)?'1':'0';
+        div.onclick=()=>this.pickCell(div);
+        grid.appendChild(div);
+      }
+      this.tShown=now();
+    },
+    pickCell(div){
+      if (!running) return;
+      const correct = div.dataset.goal==='1';
+      const rt = now()-this.tShown;
+      this.trial++;
+      trialRows.push({
+        id:participantId, grupo:groupId, tarea:"grilla", condicion:currentCondition(),
+        trial:this.trial, goal:this.goal, tapped:div.textContent,
+        correct:correct?1:0, rt_ms:Math.round(rt)
+      });
+      $('#gr_msg').innerHTML = correct ? '<span class="ok">✓ Correcto</span>' : '<span class="bad">✗ Incorrecto</span>';
+      this.renderGrid();
+    },
+    newGoal(){
+      this.goal=this.randLetter(this.goal);
+      $('#gr_goal').textContent=this.goal;
+      this.renderGrid();
+    },
+    start(){ this.trial=0; this.newGoal(); },
+    stop(){}
+  },
+
+  secuencia: {
+    mount(container){
+      container.innerHTML = `
+        <div class="card" style="text-align:center; width:min(580px,94%); margin:0 auto;">
+          <div class="muted">Tocá los números en orden <b>1 → 10</b>.</div>
+          <div id="sq_board" style="display:grid; grid-template-columns: repeat(5,1fr); gap:10px; width:min(560px,94%); margin:0 auto;"></div>
+          <div id="sq_msg" class="muted" style="min-height:20px;margin-top:6px;"></div>
+        </div>
+        <div class="bottomBar" style="width:min(580px,94%); margin:10px auto 0;">
+          <button id="sq_resetBtn" class="secondary">Nueva disposición</button>
+        </div>`;
+      this.bind();
+    },
+    bind(){ $('#sq_resetBtn').onclick=()=>{ this.nextExpected=1; this.shuffleLayout(); this.renderBoard(); }; },
+    nextExpected:1, layout:[], trial:0, tShown:0,
+    shuffleLayout(){
+      const nums=[1,2,3,4,5,6,7,8,9,10];
+      for(let i=nums.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [nums[i],nums[j]]=[nums[j],nums[i]];
+      }
+      this.layout=nums;
+    },
+    renderBoard(){
+      const board=$('#sq_board'); board.innerHTML='';
+      this.layout.forEach(n=>{
+        const div=document.createElement('div');
+        div.style.background='#e2e8f0'; div.style.borderRadius='12px';
+        div.style.display='flex'; div.style.alignItems='center'; div.style.justifyContent='center';
+        div.style.aspectRatio='1'; div.style.fontSize='30px'; div.textContent=n;
+        div.onclick=()=>this.tap(n,div);
+        board.appendChild(div);
+      });
+      this.tShown=now();
+    },
+    tap(n,div){
+      if (!running) return;
+      const correct=(n===this.nextExpected);
+      const rt=now()-this.tShown;
+      this.trial++;
+      trialRows.push({
+        id:participantId, grupo:groupId, tarea:"secuencia", condicion:currentCondition(),
+        trial:this.trial, tapped:n, expected:this.nextExpected,
+        correct:correct?1:0, rt_ms:Math.round(rt)
+      });
+
+      if(correct){
+        div.style.visibility='hidden';
+        this.nextExpected++;
+        if(this.nextExpected>10){
+          $('#sq_msg').innerHTML='<span class="ok">✓ Secuencia completa</span>';
+          this.nextExpected=1;
+          this.shuffleLayout(); this.renderBoard();
+        }else{
+          $('#sq_msg').textContent='Siguiente: '+this.nextExpected;
+          this.tShown=now();
+        }
+      }else{
+        $('#sq_msg').innerHTML='<span class="bad">✗ Incorrecto (esperado '+this.nextExpected+')</span>';
+      }
+    },
+    start(){ this.trial=0; this.nextExpected=1; this.shuffleLayout(); this.renderBoard(); },
+    stop(){}
+  }
+
+};
+
+/* =========================================================
+   Flow control
+========================================================= */
+function currentTaskKey(){ return taskOrder[taskIndex]; }
+function currentCondition(){ return conditionOrder[condIndex]; }
+
+function setupConditionUI(){
+  const cond=currentCondition();
+  $('#labelTask').textContent = `Tarea: ${taskTitles[currentTaskKey()]}`;
+  $('#labelCond').textContent = `Condición: ${cond}`;
+  $('#dualIndicators').style.display = (cond==="DUAL") ? "flex" : "none";
+  $('#baseIndicators').style.display = (cond==="BASE") ? "block" : "none";
+  $('#flashBar').style.display = (cond==="DUAL") ? "block" : "none";
+  $('#supportNote').textContent = canVibrate ? "Vibración habilitada" : "Sin vibración: sólo flash visual";
+  $('#iosWarn').style.display = (!canVibrate && cond==="DUAL") ? "block" : "none";
+}
+
+function startBlock(){
+  const taskKey=currentTaskKey();
+  const task=TASKS[taskKey];
+
+  // reset ping logs per block
+  vibCount=0; hits=0; falseAlarms=0; openWindow=false; acked=false; currentPing=null;
+  vibRTs.length=0; vibLog.length=0;
+
+  // mount + start task
+  $('#taskContainer').innerHTML="";
+  task.mount($('#taskContainer'));
+  task.start();
+
+  // start timers
+  running=true;
+  secondsLeft=BLOCK_SECONDS;
+  $('#timeLeft').textContent=secondsLeft;
+  blockStartISO=new Date().toISOString();
+
+  if(currentCondition()==="DUAL") scheduleNextPing();
+
+  blockTimer=setInterval(()=>{
+    secondsLeft--;
+    $('#timeLeft').textContent=secondsLeft;
+    if(secondsLeft<=0) stopBlock();
+  },1000);
+
+  setupConditionUI();
+  showView("viewTask");
+}
+
+function stopBlock(){
+  if(!running) return;
+  running=false;
+  clearInterval(blockTimer);
+  clearTimeout(pingTimer);
+  if(canVibrate) navigator.vibrate(0);
+
+  // stop task
+  const task=TASKS[currentTaskKey()];
+  task.stop();
+
+  blockEndISO=new Date().toISOString();
+
+  // go TLX
+  resetTLXUI();
+  showView("viewTLX");
+}
+
+function resetTLXUI(){
+  tlxTouched = new Set();
+  $("#tlxDoneBtn").disabled = true;
+  $("#tlxDoneBtn").title = "Ajustá al menos 3 sliders";
+  $("#tlxHint").style.display = "block";
+
+  for(const k of Object.keys(TLX)){
+    TLX[k]=50;
+    const el=$("#tlx_"+k);
+    const out=$("#tlx_"+k+"_out");
+    if(el){ el.value=50; out.textContent=50; }
+  }
+}
+
+function saveTLXBlock(){
+  tlxRows.push({
+    id:participantId, grupo:groupId, tarea:currentTaskKey(), condicion:currentCondition(),
+    mental:TLX.mental, fisica:TLX.fisica, temporal:TLX.temporal,
+    esfuerzo:TLX.esfuerzo, rendimiento:TLX.rendimiento, frustracion:TLX.frustracion,
+    block_start:blockStartISO, block_end:blockEndISO,
+    vib_count:vibCount, vib_hits:hits, vib_false:falseAlarms,
+    vib_rt_mean: vibRTs.length ? Math.round(vibRTs.reduce((a,b)=>a+b,0)/vibRTs.length) : ""
+  });
+}
+
+function nextStepAfterTLX(){
+  startBreak();
+}
+
+function startBreak(){
+  let t=BREAK_SECONDS;
+  $("#breakTimer").textContent=t;
+  showView("viewBreak");
+  const int=setInterval(()=>{
+    t--;
+    $("#breakTimer").textContent=t;
+    if(t<=0){
+      clearInterval(int);
+      advanceFlow();
+    }
+  },1000);
+}
+
+function advanceFlow(){
+  // next condition within same task?
+  condIndex++;
+  if(condIndex < conditionOrder.length){
+    startBlock();
+    return;
+  }
+
+  // next task
+  taskIndex++;
+  if(taskIndex < taskOrder.length){
+    // randomize cond order for new task
+    conditionOrder = Math.random()<0.5 ? ["BASE","DUAL"] : ["DUAL","BASE"];
+    condIndex=0;
+    startBlock();
+    return;
+  }
+
+  // finished
+  showView("viewEnd");
+}
+
+/* =========================================================
+   Export consolidated CSV
+========================================================= */
+function exportCSV(){
+  const headerTrials = Object.keys(trialRows[0]||{
+    id:"",grupo:"",tarea:"",condicion:"",
+    trial:"",rt_ms:"",correct:""
+  });
+  const headerTLX = Object.keys(tlxRows[0]||{
+    id:"",grupo:"",tarea:"",condicion:"",
+    mental:"",fisica:"",temporal:"",esfuerzo:"",rendimiento:"",frustracion:"",
+    block_start:"",block_end:"",
+    vib_count:"",vib_hits:"",vib_false:"",vib_rt_mean:""
+  });
+
+  const trialsCSV = [headerTrials, ...trialRows.map(r=>headerTrials.map(h=>r[h]))];
+  const tlxCSV    = [headerTLX,    ...tlxRows.map(r=>headerTLX.map(h=>r[h]))];
+
+  const out =
+    "TRIALS\n" + toCSV(trialsCSV) +
+    "\n\nTLX\n" + toCSV(tlxCSV);
+
+  const fname = `taller_${participantId}_${groupId}_${timestamp()}.csv`;
+  shareOrDownloadCSV(out, fname).then(shared=>{
+    $("#exportMsg").textContent = shared ? "Compartido por WhatsApp." : "Descargado. Ahora compartilo por WhatsApp.";
+  });
+}
+
+/* =========================================================
+   Bindings
+========================================================= */
+document.addEventListener("DOMContentLoaded", ()=>{
+
+  $("#pid").addEventListener("input", e=>{
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,4);
+  });
+
+  $("#beginBtn").onclick = ()=>{
+    participantId = ($("#pid").value||"").trim();
+    if(participantId.length<1){ alert("Ingresá un ID."); return; }
+    groupId = $("#groupSel").value;
+    taskOrder = latinSquare[groupId].slice();
+
+    taskIndex=0;
+    conditionOrder = Math.random()<0.5 ? ["BASE","DUAL"] : ["DUAL","BASE"];
+    condIndex=0;
+
+    startBlock();
+  };
+
+  $("#stopBtn").onclick = stopBlock;
+  $("#buzzBtn").onclick = buzzPressed;
+
+  // TLX sliders with "touched" detection
+  function bindSlider(id,key){
+    const el=$("#"+id);
+    const out=$("#"+id+"_out");
+    el.addEventListener("input", ()=>{
+      TLX[key]=+el.value;
+      out.textContent=el.value;
+      tlxTouched.add(key);
+      if(tlxTouched.size >= 3){
+        $("#tlxDoneBtn").disabled = false;
+        $("#tlxDoneBtn").title = "";
+        $("#tlxHint").style.display = "none";
+      }
+    });
+  }
+  bindSlider("tlx_mental","mental");
+  bindSlider("tlx_fisica","fisica");
+  bindSlider("tlx_temporal","temporal");
+  bindSlider("tlx_esfuerzo","esfuerzo");
+  bindSlider("tlx_rendimiento","rendimiento");
+  bindSlider("tlx_frustracion","frustracion");
+
+  $("#tlxDoneBtn").onclick = ()=>{
+    if(tlxTouched.size < 3) return;
+    saveTLXBlock();
+    nextStepAfterTLX();
+  };
+
+  $("#exportBtn").onclick = exportCSV;
+});
+</script>
+</body>
+</html>
