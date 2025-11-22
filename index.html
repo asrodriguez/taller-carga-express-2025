@@ -138,7 +138,9 @@
     <div class="card">
       <h2>NASA - TLX</h2>
       <div class="muted">Índice de carga de tarea</div>
-      <p class="muted small">Indicá en cada slider un valor de 0 (bajo) a 100 (alto).</p>
+      <p class="muted small">Indicá en cada slider un valor de 0 (bajo) a 100 (alto) según lo que experimentaste.<br>
+        Al terminar hace tap en Completado.
+      </p>
 
       <div class="sliderRow"><div>Demanda Mental</div><input type="range" id="tlx_mental" min="0" max="100" value="50"><div><b id="tlx_mental_out">50</b></div></div>
       <div class="sliderRow"><div>Demanda Física</div><input type="range" id="tlx_fisica" min="0" max="100" value="50"><div><b id="tlx_fisica_out">50</b></div></div>
@@ -147,10 +149,10 @@
       <div class="sliderRow"><div>Rendimiento</div><input type="range" id="tlx_rendimiento" min="0" max="100" value="50"><div><b id="tlx_rendimiento_out">50</b></div></div>
       <div class="sliderRow"><div>Frustración</div><input type="range" id="tlx_frustracion" min="0" max="100" value="50"><div><b id="tlx_frustracion_out">50</b></div></div>
       <div class="row" style="margin-top:10px; justify-content:flex-end;">
-        <button id="tlxDoneBtn" disabled title="Ajustá los según lo que experimentaste">Completado</button>
+        <button id="tlxDoneBtn" disabled title="Ajustá al menos 3 sliders">Completado</button>
       </div>
       
-      <div class="muted" id="tlxHint" style="margin-top:6px;">Ajustá los según lo que experimentaste.</div>
+      <div class="muted" id="tlxHint" style="margin-top:6px;">.</div>
     </div>
   </div>
 
